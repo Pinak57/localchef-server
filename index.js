@@ -51,7 +51,7 @@ const client = new MongoClient(process.env.MONGO_URI, {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     console.log("✅ MongoDB Connected");
 
     const db = client.db("LocalChefBazaar");
@@ -284,12 +284,6 @@ app.get("/user/favorites", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch favorites" });
   }
 });
-
-
-
-
-
-
 
 
 
@@ -557,13 +551,25 @@ app.delete("/meals/:id", verifyToken, verifyRole("chef"), async (req, res) => {
 // ✅ Place new order (user only)
 app.post("/orders", verifyToken, verifyRole("user"), async (req, res) => {
   try {
+    const { mealId, mealName, foodName, chefId, chefName, price } = req.body;
+    const finalMealName = mealName || foodName; // ✅ normalize
+
+    if (!mealId || !finalMealName || !chefId || !chefName || !price) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
     const order = {
-      ...req.body,
-      userEmail: req.user.email, // ✅ track user
+      mealId,
+      mealName: finalMealName, // ✅ always save as mealName
+      chefId,
+      chefName,
+      price,
+      userEmail: req.user.email,
       orderStatus: "pending",
       paymentStatus: "Pending",
       orderTime: new Date().toISOString(),
     };
+
     const result = await ordersCollection.insertOne(order);
     res.json({ success: true, insertedId: result.insertedId });
   } catch (err) {
@@ -571,6 +577,7 @@ app.post("/orders", verifyToken, verifyRole("user"), async (req, res) => {
     res.status(500).json({ message: "Failed to place order" });
   }
 });
+
 
 // ✅ Get my orders (user only)
 app.get("/orders/my-orders", verifyToken, verifyRole("user"), async (req, res) => {
@@ -703,16 +710,19 @@ app.post("/reviews", verifyToken, async (req, res) => {
    // ---------------- FAVORITES ----------------
 
 // ✅ Add to Favorites
+// ✅ Add to Favorites
 app.post("/favorites", verifyToken, async (req, res) => {
   try {
-    const { mealId, mealName, chefId, chefName, price } = req.body;
-    const userEmail = req.user.email; // logged-in user email from JWT
+    const { mealId, mealName, foodName, chefId, chefName, price, foodImage } = req.body;
+    const userEmail = req.user.email;
 
-    if (!mealId || !mealName || !chefId || !chefName || !price) {
+    // allow either mealName or foodName
+    const finalMealName = mealName || foodName;
+
+    if (!mealId || !finalMealName || !chefId || !chefName || !price || !foodImage) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // check if already in favorites
     const existing = await favoritesCollection.findOne({ mealId, userEmail });
     if (existing) {
       return res.status(400).json({ message: "Meal already in favorites" });
@@ -721,21 +731,23 @@ app.post("/favorites", verifyToken, async (req, res) => {
     const newFavorite = {
       userEmail,
       mealId,
-      mealName,
+      mealName: finalMealName, // ✅ normalize
       chefId,
       chefName,
       price,
+      foodImage,
       addedTime: new Date().toISOString(),
     };
 
     const result = await favoritesCollection.insertOne(newFavorite);
-
     res.json({ success: true, insertedId: result.insertedId });
   } catch (err) {
     console.error("Error adding favorite:", err);
     res.status(500).json({ message: "Failed to add favorite" });
   }
 });
+
+
 
 // ✅ Get user favorites
 app.get("/favorites", verifyToken, async (req, res) => {
@@ -930,11 +942,15 @@ app.post("/payments/webhook", express.raw({ type: "application/json" }), async (
 });
 
 
+
+
   } catch (err) {
     console.error(err);
   }
 }
 run().catch(console.dir);
+
+
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
