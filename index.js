@@ -151,32 +151,32 @@ async function run() {
     // =========================================
 
     // Get all meals with pagination, search, sort
-    app.get("/meals", async (req, res) => {
-      try {
-        const page   = parseInt(req.query.page)  || 1;
-        const limit  = parseInt(req.query.limit) || 10;
-        const search = req.query.search || "";
-        const sort   = req.query.sort; // "asc" or "desc"
+    // app.get("/meals", async (req, res) => {
+    //   try {
+    //     const page   = parseInt(req.query.page)  || 1;
+    //     const limit  = parseInt(req.query.limit) || 10;
+    //     const search = req.query.search || "";
+    //     const sort   = req.query.sort; // "asc" or "desc"
 
-        const query = search
-          ? { foodName: { $regex: search, $options: "i" } }
-          : {};
+    //     const query = search
+    //       ? { foodName: { $regex: search, $options: "i" } }
+    //       : {};
 
-        const sortOption = sort ? { price: sort === "asc" ? 1 : -1 } : {};
+    //     const sortOption = sort ? { price: sort === "asc" ? 1 : -1 } : {};
 
-        const totalMeals = await mealsCollection.countDocuments(query);
-        const meals = await mealsCollection
-          .find(query)
-          .sort(sortOption)
-          .skip((page - 1) * limit)
-          .limit(limit)
-          .toArray();
+    //     const totalMeals = await mealsCollection.countDocuments(query);
+    //     const meals = await mealsCollection
+    //       .find(query)
+    //       .sort(sortOption)
+    //       .skip((page - 1) * limit)
+    //       .limit(limit)
+    //       .toArray();
 
-        res.send({ success: true, meals, totalMeals });
-      } catch (err) {
-        res.status(500).send({ message: "Failed to fetch meals" });
-      }
-    });
+    //     res.send({ success: true, meals, totalMeals });
+    //   } catch (err) {
+    //     res.status(500).send({ message: "Failed to fetch meals" });
+    //   }
+    // });
 
     // Get single meal by ID
     app.get("/meals/:id", async (req, res) => {
@@ -591,33 +591,62 @@ async function run() {
       }
     });
 
-    app.get("/meals", async (req, res) => {
+   app.get("/meals", async (req, res) => {
   try {
-    const page         = parseInt(req.query.page)  || 1;
-    const limit        = parseInt(req.query.limit) || 10;
-    const search       = req.query.search       || "";
-    const sort         = req.query.sort         || "";
-    const deliveryArea = req.query.deliveryArea || ""; // ✅ NEW
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit) || 12, 1);
 
-    // Build query
+    const search = req.query.search || "";
+    const sort = req.query.sort || "";
+    const deliveryArea = req.query.deliveryArea || "";
+
+    // ⭐ NEW: rating filter (e.g. ?minRating=4)
+    const minRating = parseFloat(req.query.minRating) || 0;
+
     const query = {};
 
-    if (search) {
-      query.foodName = { $regex: search, $options: "i" };
+    // 🔍 search by food name
+    if (search.trim()) {
+      query.foodName = { $regex: search.trim(), $options: "i" };
     }
 
-    // ✅ Filter by delivery area
-    if (deliveryArea) {
-      query.deliveryArea = { $regex: deliveryArea, $options: "i" };
+    // 📍 delivery area filter
+    if (deliveryArea.trim()) {
+      query.deliveryArea = { $regex: deliveryArea.trim(), $options: "i" };
     }
 
-    // Sort options
+    // ⭐ rating filter (greater than or equal)
+    if (minRating > 0) {
+      query.rating = { $gte: minRating };
+    }
+
+    // 📊 sorting options
     let sortOption = {};
-    if (sort === "asc")    sortOption = { price: 1 };
-    else if (sort === "desc")   sortOption = { price: -1 };
-    else if (sort === "latest") sortOption = { createdAt: -1 };
+
+    switch (sort) {
+      case "asc":
+        sortOption = { price: 1 };
+        break;
+
+      case "desc":
+        sortOption = { price: -1 };
+        break;
+
+      case "latest":
+        sortOption = { createdAt: -1 };
+        break;
+
+      // ⭐ NEW: sort by rating
+      case "rating":
+        sortOption = { rating: -1 };
+        break;
+
+      default:
+        sortOption = { createdAt: -1 };
+    }
 
     const totalMeals = await mealsCollection.countDocuments(query);
+
     const meals = await mealsCollection
       .find(query)
       .sort(sortOption)
@@ -625,9 +654,20 @@ async function run() {
       .limit(limit)
       .toArray();
 
-    res.send({ success: true, meals, totalMeals });
+    res.status(200).send({
+      success: true,
+      meals,
+      totalMeals,
+      page,
+      limit,
+    });
+
   } catch (err) {
-    res.status(500).send({ message: "Failed to fetch meals" });
+    console.error(err);
+    res.status(500).send({
+      success: false,
+      message: "Failed to fetch meals",
+    });
   }
 });
 
