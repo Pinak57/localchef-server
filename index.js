@@ -192,7 +192,6 @@ async function run() {
         res.status(500).send({ message: "Failed to fetch profile" });
       }
     });
-
     // Get user's all orders
     app.get("/user/orders", verifyJWT, authorizeRoles("user"), async (req, res) => {
       try {
