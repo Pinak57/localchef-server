@@ -89,7 +89,6 @@ async function run() {
         if (existing) {
           return res.status(400).send({ message: "User already exists" });
         }
-
         const newUser = {
           name,
           email,
@@ -551,7 +550,6 @@ async function run() {
         res.status(500).send({ message: "Failed to fetch admin profile" });
       }
     });
-
     // Get all users
     app.get("/admin/users", verifyJWT, authorizeRoles("admin"), async (req, res) => {
       try {
