@@ -540,9 +540,7 @@ async function run() {
       }
     });
 
-    // =========================================
-    // ADMIN DASHBOARD ROUTES (role: "admin")
-    // =========================================
+    // ADMIN DASHBOARD ROUTES (role: "admin") 
 
     // Get admin profile
     app.get("/admin/profile", verifyJWT, authorizeRoles("admin"), async (req, res) => {
