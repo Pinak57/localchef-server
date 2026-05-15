@@ -449,7 +449,6 @@ async function run() {
     // =========================================
     // CHEF DASHBOARD ROUTES (role: "chef")
     // =========================================
-
     // Get chef profile
     app.get("/chef/profile", verifyJWT, authorizeRoles("chef"), async (req, res) => {
       try {
@@ -459,7 +458,6 @@ async function run() {
         res.status(500).send({ message: "Failed to fetch chef profile" });
       }
     });
-
     // Create a new meal
     app.post("/meals", verifyJWT, authorizeRoles("chef"), async (req, res) => {
       try {
