@@ -145,38 +145,6 @@ async function run() {
       }
     });
 
-    // =========================================
-    // PUBLIC ROUTES (no login required)
-    // =========================================
-
-    // Get all meals with pagination, search, sort
-    // app.get("/meals", async (req, res) => {
-    //   try {
-    //     const page   = parseInt(req.query.page)  || 1;
-    //     const limit  = parseInt(req.query.limit) || 10;
-    //     const search = req.query.search || "";
-    //     const sort   = req.query.sort; // "asc" or "desc"
-
-    //     const query = search
-    //       ? { foodName: { $regex: search, $options: "i" } }
-    //       : {};
-
-    //     const sortOption = sort ? { price: sort === "asc" ? 1 : -1 } : {};
-
-    //     const totalMeals = await mealsCollection.countDocuments(query);
-    //     const meals = await mealsCollection
-    //       .find(query)
-    //       .sort(sortOption)
-    //       .skip((page - 1) * limit)
-    //       .limit(limit)
-    //       .toArray();
-
-    //     res.send({ success: true, meals, totalMeals });
-    //   } catch (err) {
-    //     res.status(500).send({ message: "Failed to fetch meals" });
-    //   }
-    // });
-
     // Get single meal by ID
     app.get("/meals/:id", async (req, res) => {
       try {
@@ -199,7 +167,6 @@ async function run() {
         res.status(500).send({ message: "Failed to fetch reviews" });
       }
     });
-
     // Get reviews for a specific meal
     app.get("/reviews/meal/:mealId", async (req, res) => {
       try {
