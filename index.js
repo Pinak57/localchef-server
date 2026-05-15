@@ -425,7 +425,6 @@ async function run() {
     app.post("/payments", verifyJWT, async (req, res) => {
       try {
         const { orderId, paymentIntentId, amount } = req.body;
-
         const payment = {
           orderId,
           userEmail: req.user.email,
