@@ -390,7 +390,6 @@ async function run() {
         res.status(500).send({ message: "Failed to remove favorite" });
       }
     });
-
     // Request to become Chef or Admin
     app.post("/requests", verifyJWT, async (req, res) => {
       try {
@@ -590,6 +589,7 @@ async function run() {
         res.status(500).send({ message: "Failed to fetch requests" });
       }
     });
+
 
    app.get("/meals", async (req, res) => {
   try {
