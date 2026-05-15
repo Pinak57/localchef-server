@@ -298,7 +298,6 @@ async function run() {
         res.status(500).send({ message: "Failed to update review" });
       }
     });
-
     // Delete a review
     app.delete("/reviews/:id", verifyJWT, async (req, res) => {
       try {
