@@ -1,19 +1,38 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
-require("dotenv").config();
+
 
 const app = express();
 const port = process.env.PORT || 5000;
 
-// ─────────────────────────────────────────
-// MIDDLEWARE
-// ─────────────────────────────────────────
+
 app.use(express.json());
+// app.use(
+//   cors({
+//     origin: [
+//        "https://localchefbazaaar.netlify.app",
+//     ],
+//     credentials: true,
+//   })
+// );
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://localchefbazaaar.netlify.app"
+];
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
@@ -144,6 +163,92 @@ async function run() {
         res.status(500).send({ message: "Failed to fetch user" });
       }
     });
+
+
+      
+   app.get("/meals", async (req, res) => {
+  try {
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit) || 12, 1);
+
+    const search = req.query.search || "";
+    const sort = req.query.sort || "";
+    const deliveryArea = req.query.deliveryArea || "";
+
+    // ⭐ NEW: rating filter (e.g. ?minRating=4)
+    const minRating = parseFloat(req.query.minRating) || 0;
+
+    const query = {};
+
+    // 🔍 search by food name
+    if (search.trim()) {
+      query.foodName = { $regex: search.trim(), $options: "i" };
+    }
+
+    // 📍 delivery area filter
+    if (deliveryArea.trim()) {
+      query.deliveryArea = { $regex: deliveryArea.trim(), $options: "i" };
+    }
+
+    // ⭐ rating filter (greater than or equal)
+    if (minRating > 0) {
+      query.rating = { $gte: minRating };
+    }
+
+    // 📊 sorting options
+    let sortOption = {};
+
+    switch (sort) {
+      case "asc":
+        sortOption = { price: 1 };
+        break;
+
+      case "desc":
+        sortOption = { price: -1 };
+        break;
+
+      case "latest":
+        sortOption = { createdAt: -1 };
+        break;
+
+      // ⭐ NEW: sort by rating
+      case "rating":
+        sortOption = { rating: -1 };
+        break;
+
+      default:
+        sortOption = { createdAt: -1 };
+    }
+
+    const totalMeals = await mealsCollection.countDocuments(query);
+
+    const meals = await mealsCollection
+      .find(query)
+      .sort(sortOption)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .toArray();
+
+    res.status(200).send({
+      success: true,
+      meals,
+      totalMeals,
+      page,
+      limit,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({
+      success: false,
+      message: "Failed to fetch meals",
+    });
+  }
+});
+
+
+
+
 
     // Get single meal by ID
     app.get("/meals/:id", async (req, res) => {
@@ -549,85 +654,88 @@ async function run() {
     });
 
 
-   app.get("/meals", async (req, res) => {
-  try {
-    const page = Math.max(parseInt(req.query.page) || 1, 1);
-    const limit = Math.max(parseInt(req.query.limit) || 12, 1);
 
-    const search = req.query.search || "";
-    const sort = req.query.sort || "";
-    const deliveryArea = req.query.deliveryArea || "";
 
-    // ⭐ NEW: rating filter (e.g. ?minRating=4)
-    const minRating = parseFloat(req.query.minRating) || 0;
 
-    const query = {};
+//    app.get("/meals", async (req, res) => {
+//   try {
+//     const page = Math.max(parseInt(req.query.page) || 1, 1);
+//     const limit = Math.max(parseInt(req.query.limit) || 12, 1);
 
-    // 🔍 search by food name
-    if (search.trim()) {
-      query.foodName = { $regex: search.trim(), $options: "i" };
-    }
+//     const search = req.query.search || "";
+//     const sort = req.query.sort || "";
+//     const deliveryArea = req.query.deliveryArea || "";
 
-    // 📍 delivery area filter
-    if (deliveryArea.trim()) {
-      query.deliveryArea = { $regex: deliveryArea.trim(), $options: "i" };
-    }
+//     // ⭐ NEW: rating filter (e.g. ?minRating=4)
+//     const minRating = parseFloat(req.query.minRating) || 0;
 
-    // ⭐ rating filter (greater than or equal)
-    if (minRating > 0) {
-      query.rating = { $gte: minRating };
-    }
+//     const query = {};
 
-    // 📊 sorting options
-    let sortOption = {};
+//     // 🔍 search by food name
+//     if (search.trim()) {
+//       query.foodName = { $regex: search.trim(), $options: "i" };
+//     }
 
-    switch (sort) {
-      case "asc":
-        sortOption = { price: 1 };
-        break;
+//     // 📍 delivery area filter
+//     if (deliveryArea.trim()) {
+//       query.deliveryArea = { $regex: deliveryArea.trim(), $options: "i" };
+//     }
 
-      case "desc":
-        sortOption = { price: -1 };
-        break;
+//     // ⭐ rating filter (greater than or equal)
+//     if (minRating > 0) {
+//       query.rating = { $gte: minRating };
+//     }
 
-      case "latest":
-        sortOption = { createdAt: -1 };
-        break;
+//     // 📊 sorting options
+//     let sortOption = {};
 
-      // ⭐ NEW: sort by rating
-      case "rating":
-        sortOption = { rating: -1 };
-        break;
+//     switch (sort) {
+//       case "asc":
+//         sortOption = { price: 1 };
+//         break;
 
-      default:
-        sortOption = { createdAt: -1 };
-    }
+//       case "desc":
+//         sortOption = { price: -1 };
+//         break;
 
-    const totalMeals = await mealsCollection.countDocuments(query);
+//       case "latest":
+//         sortOption = { createdAt: -1 };
+//         break;
 
-    const meals = await mealsCollection
-      .find(query)
-      .sort(sortOption)
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .toArray();
+//       // ⭐ NEW: sort by rating
+//       case "rating":
+//         sortOption = { rating: -1 };
+//         break;
 
-    res.status(200).send({
-      success: true,
-      meals,
-      totalMeals,
-      page,
-      limit,
-    });
+//       default:
+//         sortOption = { createdAt: -1 };
+//     }
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).send({
-      success: false,
-      message: "Failed to fetch meals",
-    });
-  }
-});
+//     const totalMeals = await mealsCollection.countDocuments(query);
+
+//     const meals = await mealsCollection
+//       .find(query)
+//       .sort(sortOption)
+//       .skip((page - 1) * limit)
+//       .limit(limit)
+//       .toArray();
+
+//     res.status(200).send({
+//       success: true,
+//       meals,
+//       totalMeals,
+//       page,
+//       limit,
+//     });
+
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send({
+//       success: false,
+//       message: "Failed to fetch meals",
+//     });
+//   }
+// });
 
 
     // Accept or Reject a role request
